@@ -130,9 +130,18 @@ void BaseRealSenseNode::setAvailableSensors()
     {
         const std::string module_name(sensor.get_info(RS2_CAMERA_INFO_NAME));
         std::unique_ptr<RosSensor> rosSensor;
-        if (sensor.is<rs2::depth_sensor>() || 
+        bool is_video_sensor = (sensor.is<rs2::depth_sensor>() ||
             sensor.is<rs2::color_sensor>() ||
-            sensor.is<rs2::fisheye_sensor>())
+            sensor.is<rs2::fisheye_sensor>());
+        if (!is_video_sensor)
+        {
+            // The R200 exposes a standalone IR sensor which is not tagged as a
+            // depth/color/fisheye sensor; accept any sensor carrying video profiles.
+            auto profiles = sensor.get_stream_profiles();
+            is_video_sensor = std::any_of(profiles.begin(), profiles.end(),
+                [](const stream_profile & p) { return p.is<rs2::video_stream_profile>(); });
+        }
+        if (is_video_sensor)
         {
             ROS_DEBUG_STREAM("Set " << module_name << " as VideoSensor.");
             rosSensor = std::make_unique<RosSensor>(sensor, _parameters, frame_callback_function, update_sensor_func, hardware_reset_func, _diagnostics_updater, _logger, _use_intra_process, _dev.is<playback>());
@@ -296,7 +305,13 @@ void BaseRealSenseNode::updateSensors()
             std::vector<stream_profile> wanted_profiles;
 
             bool is_profile_changed(sensor->getUpdatedProfiles(wanted_profiles));
-            bool is_video_sensor = (sensor->is<rs2::depth_sensor>() || sensor->is<rs2::color_sensor>() || sensor->is<rs2::fisheye_sensor>());          
+            bool is_video_sensor = (sensor->is<rs2::depth_sensor>() || sensor->is<rs2::color_sensor>() || sensor->is<rs2::fisheye_sensor>());
+            if (!is_video_sensor)
+            {
+                auto profiles = sensor->get_stream_profiles();
+                is_video_sensor = std::any_of(profiles.begin(), profiles.end(),
+                    [](const stream_profile & p) { return p.is<rs2::video_stream_profile>(); });
+            }
 
             // do all updates if profile has been changed, or if the align depth filter status has been changed
             // and we are on a video sensor. TODO: explore better options to monitor and update changes
