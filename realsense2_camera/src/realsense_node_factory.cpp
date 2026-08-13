@@ -358,6 +358,8 @@ void RealSenseNodeFactory::startDevice()
         {
         case SR300_PID:
         case SR300v2_PID:
+        case R200_PID:
+        case LR200_PID:
         case RS400_PID:
         case RS405_PID:
         case RS410_PID:

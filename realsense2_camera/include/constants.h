@@ -50,6 +50,8 @@ namespace realsense2_camera
 {
     const uint16_t SR300_PID        = 0x0aa5; // SR300
     const uint16_t SR300v2_PID      = 0x0B48; // SR305
+    const uint16_t R200_PID         = 0x0a80; // R200 (DS4)
+    const uint16_t LR200_PID        = 0x0abf; // LR200 (DS4 variant)
     const uint16_t RS400_PID        = 0x0ad1; // PSR
     const uint16_t RS410_PID        = 0x0ad2; // ASR
     const uint16_t RS415_PID        = 0x0ad3; // ASRC
