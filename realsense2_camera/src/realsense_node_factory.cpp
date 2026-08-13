@@ -1,5 +1,6 @@
 // License: Apache 2.0. See LICENSE file in root directory.
 // Copyright(c) 2022 Intel Corporation. All Rights Reserved
+// Modified in 2026 for the community R200 RS2/ROS2 port.
 
 #include "../include/realsense_node_factory.h"
 #include "../include/base_realsense_node.h"
