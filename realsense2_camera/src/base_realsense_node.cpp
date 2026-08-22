@@ -172,14 +172,19 @@ void BaseRealSenseNode::setupFilters()
         }
         _cv_mpc.notify_one();
     };
+    _colorizer_filter = std::make_shared<NamedFilter>(std::make_shared<rs2::colorizer>(), _parameters, _logger);
+    _pc_filter = std::make_shared<PointcloudFilter>(std::make_shared<rs2::pointcloud>(), _node, _parameters, _logger);
+
+    // Pointcloud requires the original Z16 depth frame.  Running colorizer
+    // first replaces it with RGB8 and leaves the pointcloud topic silent.
+    _filters.push_back(_pc_filter);
+
     _align_depth_filter = std::make_shared<AlignDepthFilter>(std::make_shared<rs2::align>(RS2_STREAM_COLOR), update_align_depth_func, _parameters, _logger);
     _filters.push_back(_align_depth_filter);
 
-    _colorizer_filter = std::make_shared<NamedFilter>(std::make_shared<rs2::colorizer>(), _parameters, _logger); 
-    _filters.push_back(_colorizer_filter);
-
-    _pc_filter = std::make_shared<PointcloudFilter>(std::make_shared<rs2::pointcloud>(), _node, _parameters, _logger);
-    _filters.push_back(_pc_filter);
+    // Colorizer is applied only to the depth frame handed to publishFrame().
+    // librealsense 2.51 cannot safely process a frameset after pointcloud has
+    // inserted an rs2::points frame, while pointcloud itself still needs Z16.
 }
 
 cv::Mat& BaseRealSenseNode::fix_depth_scale(const cv::Mat& from_image, cv::Mat& to_image)
@@ -563,6 +568,23 @@ void BaseRealSenseNode::frame_callback(rs2::frame frame)
         ROS_DEBUG("num_filters: %d", static_cast<int>(_filters.size()));
         for (auto filter_it : _filters)
         {
+            if (filter_it.get() == _pc_filter.get())
+            {
+                if (!original_depth_frame)
+                    continue;
+
+                // librealsense 2.51 returns a reduced frameset containing the
+                // generated points and drops unrelated R200 IR frames.  Use
+                // that result only for pointcloud publication, while keeping
+                // the full frameset for image publishers and later filters.
+                auto pointcloud_frameset = filter_it->Process(frameset);
+                for (auto pointcloud_frame : pointcloud_frameset)
+                {
+                    if (pointcloud_frame.is<rs2::points>())
+                        publishPointCloud(pointcloud_frame.as<rs2::points>(), t, frameset);
+                }
+                continue;
+            }
             frameset = filter_it->Process(frameset);
         }
 
@@ -599,6 +621,8 @@ void BaseRealSenseNode::frame_callback(rs2::frame frame)
                             false);
                     continue;
                 }
+                if (_colorizer_filter->is_enabled())
+                    f = _colorizer_filter->Process(f);
             }
             publishFrame(f, t, sip,
                         _image,
@@ -634,6 +658,8 @@ void BaseRealSenseNode::frame_callback(rs2::frame frame)
             {
                 clip_depth(frame, _clipping_distance);
             }
+            if (_colorizer_filter->is_enabled())
+                frame = _colorizer_filter->Process(frame);
         }
         publishFrame(frame, t,
                     sip,
