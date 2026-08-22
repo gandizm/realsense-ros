@@ -570,7 +570,30 @@ void BaseRealSenseNode::frame_callback(rs2::frame frame)
         {
             if (filter_it.get() == _pc_filter.get())
             {
-                if (!original_depth_frame)
+                // Do not allocate synthetic XYZ frames until somebody needs
+                // them. This is particularly important for high-rate legacy
+                // devices with a small librealsense frame archive.
+                if (!original_depth_frame || !_pc_filter->hasSubscribers())
+                    continue;
+
+                // The 2.51 pointcloud block falls back to processing an
+                // individual depth sub-frame when the current frameset has no
+                // texture. With mixed 90 Hz depth / 30 Hz RGB that allocates
+                // untextured XYZ frames at 90 Hz and exhausts the archive.
+                // Wait for a frameset containing the selected texture; this
+                // naturally caps colored point clouds at the texture rate.
+                const auto texture_stream = static_cast<rs2_stream>(
+                    _pc_filter->_filter->get_option(RS2_OPTION_STREAM_FILTER));
+                bool has_texture = texture_stream == RS2_STREAM_ANY;
+                for (auto candidate : frameset)
+                {
+                    if (candidate.get_profile().stream_type() == texture_stream)
+                    {
+                        has_texture = true;
+                        break;
+                    }
+                }
+                if (!has_texture)
                     continue;
 
                 // librealsense 2.51 returns a reduced frameset containing the

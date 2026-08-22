@@ -43,6 +43,7 @@ namespace realsense2_camera
             PointcloudFilter(std::shared_ptr<rs2::filter> filter, rclcpp::Node& node, std::shared_ptr<Parameters> parameters, rclcpp::Logger logger, bool is_enabled=false);
         
             void setPublisher();
+            bool hasSubscribers();
             void Publish(rs2::points pc, const rclcpp::Time& t, const rs2::frameset& frameset, const std::string& frame_id);
 
         private:

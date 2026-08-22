@@ -5,6 +5,20 @@ This version supports ROS2 Dashing, Eloquent, Foxy, Galactic and Rolling.
 
 LibRealSense supported version: v2.51.1 (see [realsense2_camera release notes](https://github.com/IntelRealSense/realsense-ros/releases))
 
+### R200 community-fork default
+
+When this branch is built against the companion `r200-rs2-port` librealsense
+branch, the automatic `0,0,0` profile resolves to Depth/IR 640x480@90 and Color
+640x480@30 on R200. This prioritizes the lower-latency stereo path without
+changing the standard ROS parameter API. To make the choice explicit, use
+`depth_module.profile:=640x480x90`, `stereo_ir_sensor.profile:=640x480x90`, and
+`rgb_camera.profile:=640x480x30`.
+
+For mixed-rate colored point clouds, this branch avoids point-cloud allocation
+until a subscriber exists and a frameset contains the selected texture. Raw
+Depth/IR publication therefore remains at 90 Hz while RGB-colored point clouds
+are naturally limited by the 30 Hz color stream.
+
 ## Please notice: if you are moving from RealSense [ROS2 branch](https://github.com/IntelRealSense/realsense-ros/tree/ros2) to ROS2-beta:
 - **Changed Parameters**:
     - **"stereo_module"**, **"l500_depth_sensor"** are replaced by **"depth_module"**

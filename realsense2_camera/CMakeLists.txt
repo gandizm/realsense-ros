@@ -106,6 +106,11 @@ if(NOT realsense2_FOUND)
     message(FATAL_ERROR "\n\n Intel RealSense SDK 2.0 is missing, please install it from https://github.com/IntelRealSense/librealsense/releases\n\n")
 endif()
 
+# ROS installations may also export a different librealsense under the broad
+# /opt/ros/<distro>/include directory.  Prefer the headers belonging to the
+# exact CMake package selected above so declarations and the linked ABI match.
+include_directories(BEFORE SYSTEM ${realsense2_INCLUDE_DIR})
+
 #set(CMAKE_NO_SYSTEM_FROM_IMPORTED true)
 include_directories(include)
 

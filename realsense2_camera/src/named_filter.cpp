@@ -121,6 +121,12 @@ void PointcloudFilter::setPublisher()
     }
 }
 
+bool PointcloudFilter::hasSubscribers()
+{
+    std::lock_guard<std::mutex> lock_guard(_mutex_publisher);
+    return _pointcloud_publisher && _pointcloud_publisher->get_subscription_count();
+}
+
 void reverse_memcpy(unsigned char* dst, const unsigned char* src, size_t n)
 {
     size_t i;
